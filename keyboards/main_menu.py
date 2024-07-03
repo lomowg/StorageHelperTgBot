@@ -9,3 +9,5 @@ def create_main_menu() -> InlineKeyboardMarkup:
     )
 
     return keyboard
+
+
