@@ -1,14 +1,19 @@
 import asyncio
 import logging
+import asyncpg
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+
 from handlers import other_handlers, user_handlers
 from config_data.config import Config, load_config
 
+from asyncpg.pool import Pool
+
 
 logger = logging.getLogger(__name__)
+
 
 
 async def main():
@@ -28,11 +33,17 @@ async def main():
     )
     dp = Dispatcher()
 
+    pool_connect: Pool = await asyncpg.create_pool(host=config.con_pool.db.host,
+                                                   port=config.con_pool.db.port,
+                                                   database=config.con_pool.db.db_name,
+                                                   user=config.con_pool.user.user,
+                                                   password=config.con_pool.user.password
+                                                   )
+
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
-
 
 asyncio.run(main())
