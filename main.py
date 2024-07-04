@@ -10,10 +10,11 @@ from handlers import other_handlers, user_handlers
 from config_data.config import Config, load_config
 
 from asyncpg.pool import Pool
+from middlewares.db_middleware import DataBaseMiddleware
+from database.database import create_tables
 
 
 logger = logging.getLogger(__name__)
-
 
 
 async def main():
@@ -37,11 +38,17 @@ async def main():
                                                    port=config.con_pool.db.port,
                                                    database=config.con_pool.db.db_name,
                                                    user=config.con_pool.user.user,
-                                                   password=config.con_pool.user.password
-                                                   )
+                                                   password=config.con_pool.user.password)
+
+    dp.update.middleware.register(DataBaseMiddleware(pool_connect))
 
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
+
+    await create_tables(user=config.con_pool.user.user,
+                        password=config.con_pool.user.password,
+                        database=config.con_pool.db.db_name,
+                        host=config.con_pool.db.host)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
