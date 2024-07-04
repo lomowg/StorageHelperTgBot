@@ -22,7 +22,7 @@ async def process_start_command(message: Message, database: DataBaseClass):
 
     text = LEXICON_RU[message.text]
 
-    if not get_user(connector=database, user_id=message.from_user.id):
+    if not await get_user(connector=database, user_id=message.from_user.id):
         await add_new_user(connector=database, user_id=message.from_user.id, username=message.from_user.username)
 
     await message.answer(
