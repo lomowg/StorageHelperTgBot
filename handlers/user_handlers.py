@@ -3,22 +3,27 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from database.database import add_new_user, get_user
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
 from keyboards.settings_menu import create_settings_menu, create_language_menu
 from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu
+from database.connection_pool import DataBaseClass
+
 
 router = Router()
 
 
 @router.message(CommandStart())
-async def process_start_command(message: Message):
-    # if message.from_user.id not in users_db: сделать проверку на нахождение в бд
-    #     pass
+async def process_start_command(message: Message, database: DataBaseClass):
 
     text = LEXICON_RU[message.text]
+
+    if not get_user(connector=database, user_id=message.from_user.id):
+        await add_new_user(connector=database, user_id=message.from_user.id, username=message.from_user.username)
 
     await message.answer(
         text=text,
