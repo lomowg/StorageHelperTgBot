@@ -9,8 +9,15 @@ async def add_new_user(connector: DataBaseClass,
         """
             INSERT INTO "users"
             VALUES($1, $2);
-            """
+        """
     await connector.execute(command, user_id, username, execute=True)
+
+    command = \
+        """
+            INSERT INTO "folders" (folder_name, user_id)
+            VALUES ($1, $2)
+        """
+    await connector.execute(command, 'Избранное', user_id, execute=True)
 
 
 async def get_user(connector: DataBaseClass, user_id: int):
@@ -28,10 +35,27 @@ async def create_tables(user, password, database, host):
                                  database=database, host=host)
 
     await conn.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(100)
-        )
-    ''')
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INT,
+                username VARCHAR(100) NOT NULL
+            );
+        ''')
+
+    await conn.execute('''
+            CREATE TABLE IF NOT EXISTS folders (
+                id SERIAL PRIMARY KEY,
+                folder_name VARCHAR(100) NOT NULL,
+                user_id INT
+            );
+        ''')
+
+    await conn.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                folder_id INT,
+                message_type VARCHAR(50) NOT NULL,
+                content TEXT NOT NULL
+            );
+        ''')
 
     await conn.close()
