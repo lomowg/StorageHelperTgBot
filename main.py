@@ -5,6 +5,7 @@ import asyncpg
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from handlers import other_handlers, user_handlers
 from config_data.config import Config, load_config
@@ -32,7 +33,8 @@ async def main():
         token=config.tg_bot.token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
-    dp = Dispatcher()
+    storage: MemoryStorage = MemoryStorage()
+    dp = Dispatcher(storage=storage)
 
     pool_connect: Pool = await asyncpg.create_pool(host=config.con_pool.db.host,
                                                    port=config.con_pool.db.port,
