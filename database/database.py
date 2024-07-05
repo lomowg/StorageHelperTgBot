@@ -10,6 +10,7 @@ async def add_new_user(connector: DataBaseClass,
             INSERT INTO "users"
             VALUES($1, $2);
         """
+
     await connector.execute(command, user_id, username, execute=True)
 
     command = \
@@ -17,7 +18,30 @@ async def add_new_user(connector: DataBaseClass,
             INSERT INTO "folders" (folder_name, user_id)
             VALUES ($1, $2)
         """
+
     await connector.execute(command, 'Избранное', user_id, execute=True)
+
+
+async def add_new_folder(connector: DataBaseClass, user_id: int, folder_name: str):
+    command = \
+        """
+            INSERT INTO "folders" (folder_name, user_id)
+            VALUES ($1, $2)
+        """
+
+    await connector.execute(command, folder_name, user_id, execute=True)
+
+
+async def get_user_folder(connector: DataBaseClass, user_id: int, folder_name: str):
+    command = \
+        """
+            SELECT * FROM "folders"
+            WHERE user_id = $1 AND folder_name = $2;
+        """
+
+    result = await connector.execute(command, user_id, folder_name, fetchrow=True)
+
+    return result
 
 
 async def get_user(connector: DataBaseClass, user_id: int):
@@ -26,7 +50,9 @@ async def get_user(connector: DataBaseClass, user_id: int):
             SELECT * FROM "users"
             WHERE user_id = $1;
         """
+
     result = await connector.execute(command, user_id, fetchrow=True)
+
     return result
 
 
