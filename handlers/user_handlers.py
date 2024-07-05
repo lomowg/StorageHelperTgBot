@@ -8,13 +8,14 @@ from aiogram.fsm.state import default_state
 
 from aiogram import types
 
-from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders
+from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
+    delete_folder
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
 from keyboards.settings_menu import create_settings_menu, create_language_menu
 from keyboards.main_menu import create_main_menu
-from keyboards.storage_menu import create_dirs_menu
+from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard
 from database.connection_pool import DataBaseClass
 
 from states.states import FSMStorageManipulating
@@ -128,12 +129,10 @@ async def process_folder_name(message: types.Message, database: DataBaseClass, s
 async def process_delete_dir_command(callback: CallbackQuery, database: DataBaseClass):
     text = LEXICON_RU[callback.data]
 
-    # Реализовать удаление папок
-
     await callback.message.edit_text(
         text=text,
-        reply_markup=create_dirs_menu(*await get_user_all_folders(connector=database,
-                                                                  user_id=callback.from_user.id))
+        reply_markup=create_edit_keyboard(*await get_user_all_folders(connector=database,
+                                                                      user_id=callback.from_user.id))
     )
 
     await callback.answer()
@@ -164,6 +163,17 @@ async def process_create_dir_command(callback: CallbackQuery):
     await callback.message.edit_text(
         text=text,
         reply_markup=kb_builder.as_markup()
+    )
+
+    await callback.answer()
+
+
+@router.callback_query(lambda x: x.data.endswith('del'))
+async def process_del_bookmark_press(callback: CallbackQuery, database: DataBaseClass):
+    await delete_folder(connector=database, user_id=callback.from_user.id, folder_name=callback.data[:-3])
+    await callback.message.edit_text(
+        text=LEXICON_RU['storage'],
+        reply_markup=create_dirs_menu(*await get_user_all_folders(connector=database, user_id=callback.from_user.id))
     )
 
     await callback.answer()
