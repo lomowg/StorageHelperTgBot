@@ -1,10 +1,14 @@
 from aiogram import F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import CommandStart, StateFilter
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import default_state
 
-from database.database import add_new_user, get_user
+from aiogram import types
+
+from database.database import add_new_user, get_user, get_user_folder, add_new_folder
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
@@ -12,6 +16,8 @@ from keyboards.settings_menu import create_settings_menu, create_language_menu
 from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu
 from database.connection_pool import DataBaseClass
+
+from states.states import FSMStorageManipulating
 
 
 router = Router()
@@ -94,15 +100,26 @@ async def process_menu_command(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == 'create_dir')
-async def process_create_dir_command(callback: CallbackQuery):
-    text = LEXICON_RU[callback.data]
-
+async def process_create_dir_command(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        text=text,
-        reply_markup=create_dirs_menu()
+        text="Введите название новой папки:",
     )
 
+    await state.set_state(FSMStorageManipulating.write_folder_name)
     await callback.answer()
+
+
+@router.message(StateFilter(FSMStorageManipulating.write_folder_name))
+async def process_folder_name(message: types.Message, database: DataBaseClass, state: FSMContext):
+    folder_name = message.text
+    user_id = message.from_user.id
+
+    if await get_user_folder(database, user_id, folder_name):
+        await message.answer("Папка с таким названием уже существует. Попробуйте другое название.")
+    else:
+        await add_new_folder(database, user_id, folder_name)
+        await message.answer(f"Папка '{folder_name}' успешно создана.", reply_markup=create_dirs_menu())
+        await state.set_state(default_state)
 
 
 @router.callback_query(F.data == 'delete_dir')
