@@ -44,6 +44,18 @@ async def get_user_folder(connector: DataBaseClass, user_id: int, folder_name: s
     return result
 
 
+async def get_user_all_folders(connector: DataBaseClass, user_id: int):
+    command = \
+        """
+            SELECT folder_name FROM "folders"
+            WHERE user_id = $1 AND folder_name != 'Избранное';
+        """
+
+    result = await connector.execute(command, user_id, fetch=True)
+
+    return list(map(lambda x: str(x['folder_name']) + '_fldBtn', result))
+
+
 async def get_user(connector: DataBaseClass, user_id: int):
     command = \
         """
