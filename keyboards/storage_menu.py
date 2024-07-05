@@ -6,9 +6,13 @@ from lexicon.lexicon_general import LEXICON
 def create_dirs_menu(*args: int) -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
 
-    kb_builder.row(InlineKeyboardButton(text='📍 Избранное', callback_data='favourites'))
+    kb_builder.row(InlineKeyboardButton(text='📍 Избранное', callback_data='favourites_fldBtn'))
 
-    # for button in sorted(args): Реализовать добавление папок
+    for button in sorted(args):
+        kb_builder.row(InlineKeyboardButton(
+            text=str(button).replace('_fldBtn', ''),
+            callback_data=str(button)
+        ))
 
     kb_builder.row(
         InlineKeyboardButton(
