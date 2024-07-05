@@ -97,3 +97,11 @@ async def create_tables(user, password, database, host):
         ''')
 
     await conn.close()
+
+
+async def delete_folder(connector: DataBaseClass, user_id: int, folder_name: str):
+    command = """
+        DELETE FROM "folders"
+        WHERE user_id = $1 AND folder_name = $2;
+    """
+    await connector.execute(command, user_id, folder_name, execute=True)
