@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.filters import CommandStart, StateFilter
+from aiogram.filters import CommandStart, StateFilter, Command
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -31,6 +31,16 @@ async def process_start_command(message: Message, database: DataBaseClass):
 
     if not await get_user(connector=database, user_id=message.from_user.id):
         await add_new_user(connector=database, user_id=message.from_user.id, username=message.from_user.username)
+
+    await message.answer(
+        text=text,
+        reply_markup=create_main_menu()
+    )
+
+
+@router.message(Command(commands=['/menu']))
+async def process_main_menu_command(message: Message):
+    text = LEXICON_RU[message.data]
 
     await message.answer(
         text=text,
