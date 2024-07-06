@@ -1,6 +1,6 @@
 from aiogram import F, Router
 from aiogram.filters import CommandStart, StateFilter, Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, InputFile
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
@@ -9,7 +9,7 @@ from aiogram.fsm.state import default_state
 from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
-    delete_folder
+    delete_folder, get_user_folder_id, get_messages_from_folder, add_message
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
@@ -39,13 +39,15 @@ async def process_start_command(message: Message, database: DataBaseClass):
 
 
 @router.message(Command(commands=['menu']))
-async def process_main_menu_command(message: Message):
+async def process_main_menu_command(message: Message, state: FSMContext):
     text = LEXICON_RU['menu']
 
     await message.answer(
         text=text,
         reply_markup=create_main_menu()
     )
+
+    await state.set_state(default_state)
 
 
 @router.callback_query(F.data == 'storage')
@@ -187,3 +189,93 @@ async def process_del_bookmark_press(callback: CallbackQuery, database: DataBase
     )
 
     await callback.answer()
+
+
+@router.callback_query(lambda x: x.data.endswith('_fldBtn'))
+async def process_folder_press(callback: CallbackQuery, database: DataBaseClass, state: FSMContext):
+    folder_name = callback.data.replace('_fldBtn', '')
+    user_id = callback.from_user.id
+    folder_id = await get_user_folder_id(connector=database, user_id=user_id, folder_name=folder_name)
+
+    await callback.message.edit_text(f"❗️🗂 Ваши сообщения из папки {folder_name}:")
+
+    messages = await get_messages_from_folder(connector=database, folder_id=folder_id)
+
+    for message in messages:
+        message_type = message['message_type']
+        content = message['content']
+        caption = message['caption']
+        forward_info = message['forward_info']
+
+        if forward_info:
+            if caption:
+                caption = f"⤴️{forward_info}\n\n{caption}"
+            else:
+                caption = f'⤴️{forward_info}\n\n'
+
+        if message_type == 'text':
+            await callback.message.answer(f'{caption}{content}')
+        elif message_type == 'photo':
+            await callback.message.answer_photo(content, caption=caption)
+        elif message_type == 'video':
+            await callback.message.answer_video(content, caption=caption)
+        elif message_type == 'document':
+            await callback.message.answer_document(content, caption=caption)
+        elif message_type == 'audio':
+            await callback.message.answer_audio(content, caption=caption)
+        elif message_type == 'voice':
+            await callback.message.answer_voice(content, caption=caption)
+        elif message_type == 'animation':
+            await callback.message.answer_animation(content, caption=caption)
+
+    await state.set_state(FSMStorageManipulating.in_folder)
+    await state.update_data(folder_id=folder_id)
+    await callback.answer()
+
+
+@router.message(StateFilter(FSMStorageManipulating.in_folder))
+async def process_new_message(message: types.Message, database: DataBaseClass, state: FSMContext):
+    state_data = await state.get_data()
+    folder_id = state_data.get('folder_id')
+
+    message_type = None
+    content = None
+    caption = message.caption if message.caption else ''
+
+    if message.forward_from or message.forward_from_chat:
+        forward_info = f"Переслано от {message.forward_from.full_name if message.forward_from else message.forward_from_chat.title}"
+    else:
+        forward_info = ''
+
+    if message.text:
+        message_type = 'text'
+        content = message.text
+    elif message.photo:
+        message_type = 'photo'
+        content = message.photo[-1].file_id
+    elif message.video:
+        message_type = 'video'
+        content = message.video.file_id
+    elif message.document:
+        message_type = 'document'
+        content = message.document.file_id
+    elif message.audio:
+        message_type = 'audio'
+        content = message.audio.file_id
+    elif message.voice:
+        message_type = 'voice'
+        content = message.voice.file_id
+    elif message.animation:
+        message_type = 'animation'
+        content = message.animation.file_id
+    else:
+        await message.answer("Этот тип сообщения не поддерживается.")
+        return
+
+    await add_message(connector=database,
+                      folder_id=folder_id,
+                      message_type=message_type,
+                      content=content,
+                      caption=caption,
+                      forward_info=forward_info)
+
