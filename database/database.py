@@ -92,7 +92,9 @@ async def create_tables(user, password, database, host):
                 id SERIAL PRIMARY KEY,
                 folder_id INT,
                 message_type VARCHAR(50) NOT NULL,
-                content TEXT NOT NULL
+                content TEXT,
+                caption TEXT,
+                forward_info TEXT
             );
         ''')
 
@@ -105,3 +107,33 @@ async def delete_folder(connector: DataBaseClass, user_id: int, folder_name: str
         WHERE user_id = $1 AND folder_name = $2;
     """
     await connector.execute(command, user_id, folder_name, execute=True)
+
+
+async def get_user_folder_id(connector: DataBaseClass, user_id: int, folder_name: str):
+    command = \
+        """
+            SELECT id FROM "folders"
+            WHERE user_id = $1 AND folder_name = $2;
+        """
+
+    result = await connector.execute(command, user_id, folder_name, fetchrow=True)
+
+    return result['id']
+
+
+async def get_messages_from_folder(connector: DataBaseClass, folder_id: int):
+    command = """
+            SELECT message_type, content, caption, forward_info
+            FROM messages
+            WHERE folder_id = $1;
+        """
+    return await connector.execute(command, folder_id, fetch=True)
+
+
+async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: str, caption: str, forward_info: str):
+    command = """
+            INSERT INTO messages (folder_id, message_type, content, caption, forward_info)
+            VALUES ($1, $2, $3, $4, $5);
+        """
+
+    await connector.execute(command, folder_id, message_type, content, caption, forward_info, execute=True)
