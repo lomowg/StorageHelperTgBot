@@ -38,9 +38,9 @@ async def process_start_command(message: Message, database: DataBaseClass):
     )
 
 
-@router.message(Command(commands=['/menu']))
+@router.message(Command(commands=['menu']))
 async def process_main_menu_command(message: Message):
-    text = LEXICON_RU[message.data]
+    text = LEXICON_RU['menu']
 
     await message.answer(
         text=text,
