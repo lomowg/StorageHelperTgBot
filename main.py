@@ -11,6 +11,8 @@ from handlers import other_handlers, user_handlers
 from config_data.config import Config, load_config
 
 from asyncpg.pool import Pool
+
+from keyboards.main_menu import set_main_menu
 from middlewares.db_middleware import DataBaseMiddleware
 from database.database import create_tables
 
@@ -46,6 +48,7 @@ async def main():
 
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
+    dp.startup.register(set_main_menu)
 
     await create_tables(user=config.con_pool.user.user,
                         password=config.con_pool.user.password,
