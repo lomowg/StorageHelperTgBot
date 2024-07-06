@@ -74,7 +74,7 @@ async def create_tables(user, password, database, host):
 
     await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
-                user_id INT,
+                user_id BIGINT,
                 username VARCHAR(100) NOT NULL
             );
         ''')
@@ -83,7 +83,7 @@ async def create_tables(user, password, database, host):
             CREATE TABLE IF NOT EXISTS folders (
                 id SERIAL PRIMARY KEY,
                 folder_name VARCHAR(100) NOT NULL,
-                user_id INT
+                user_id BIGINT
             );
         ''')
 
