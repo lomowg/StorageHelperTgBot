@@ -1,6 +1,6 @@
-from aiogram import F, Router
+from aiogram import F, Router, Bot
 from aiogram.filters import CommandStart, StateFilter, Command
-from aiogram.types import CallbackQuery, Message, InputFile
+from aiogram.types import CallbackQuery, Message
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
@@ -9,7 +9,7 @@ from aiogram.fsm.state import default_state
 from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
-    delete_folder, get_user_folder_id, get_messages_from_folder, add_message
+    delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
@@ -17,6 +17,7 @@ from keyboards.settings_menu import create_settings_menu, create_language_menu
 from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard
 from database.connection_pool import DataBaseClass
+from services.delete_messages import cmd_clear
 
 from states.states import FSMStorageManipulating
 
@@ -39,7 +40,7 @@ async def process_start_command(message: Message, database: DataBaseClass):
 
 
 @router.message(Command(commands=['menu']))
-async def process_main_menu_command(message: Message, state: FSMContext):
+async def process_main_menu_command(message: Message, state: FSMContext, bot: Bot):
     text = LEXICON_RU['menu']
 
     await message.answer(
@@ -47,6 +48,7 @@ async def process_main_menu_command(message: Message, state: FSMContext):
         reply_markup=create_main_menu()
     )
 
+    await cmd_clear(message=message, bot=bot)
     await state.set_state(default_state)
 
 
@@ -233,6 +235,41 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
     await callback.answer()
 
 
+@router.message(lambda message: message.reply_to_message is not None and 'del' in message.text,
+                StateFilter(FSMStorageManipulating.in_folder))
+async def process_delete_message_command(message: types.Message, database: DataBaseClass, state: FSMContext):
+    content = None
+    file_id = None
+
+    if message.reply_to_message.text:
+        content = message.reply_to_message.text
+    elif message.reply_to_message.photo:
+        content = message.reply_to_message.photo[-1].file_id
+        file_id = message.reply_to_message.photo[-1].file_unique_id
+    elif message.reply_to_message.video:
+        content = message.reply_to_message.video.file_id
+        file_id = message.reply_to_message.video.file_unique_id
+    elif message.reply_to_message.document:
+        content = message.reply_to_message.document.file_id
+        file_id = message.reply_to_message.document.file_unique_id
+    elif message.reply_to_message.audio:
+        content = message.reply_to_message.audio.file_id
+        file_id = message.reply_to_message.audio.file_unique_id
+    elif message.reply_to_message.voice:
+        content = message.reply_to_message.voice.file_id
+        file_id = message.reply_to_message.voice.file_unique_id
+    elif message.reply_to_message.animation:
+        content = message.reply_to_message.animation.file_id
+        file_id = message.reply_to_message.animation.file_unique_id
+
+    caption = message.reply_to_message.caption if message.reply_to_message.caption else ''
+    state_data = await state.get_data()
+    folder_id = state_data.get('folder_id')
+
+    await delete_message(connector=database, folder_id=folder_id, content=content, caption=caption, file_id=file_id)
+    await message.answer(text='Сообщение удалено!', reply_to_message_id=message.reply_to_message.message_id)
+
+
 @router.message(StateFilter(FSMStorageManipulating.in_folder))
 async def process_new_message(message: types.Message, database: DataBaseClass, state: FSMContext):
     state_data = await state.get_data()
@@ -241,6 +278,7 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
     message_type = None
     content = None
     caption = message.caption if message.caption else ''
+    file_id = None
 
     if message.forward_from or message.forward_from_chat:
         forward_info = f"Переслано от {message.forward_from.full_name if message.forward_from else message.forward_from_chat.title}"
@@ -253,21 +291,27 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
     elif message.photo:
         message_type = 'photo'
         content = message.photo[-1].file_id
+        file_id = message.photo[-1].file_unique_id
     elif message.video:
         message_type = 'video'
         content = message.video.file_id
+        file_id = message.video.file_unique_id
     elif message.document:
         message_type = 'document'
         content = message.document.file_id
+        file_id = message.document.file_unique_id
     elif message.audio:
         message_type = 'audio'
         content = message.audio.file_id
+        file_id = message.audio.file_unique_id
     elif message.voice:
         message_type = 'voice'
         content = message.voice.file_id
+        file_id = message.voice.file_unique_id
     elif message.animation:
         message_type = 'animation'
         content = message.animation.file_id
+        file_id = message.animation.file_unique_id
     else:
         await message.answer("Этот тип сообщения не поддерживается.")
         return
@@ -277,5 +321,8 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
                       message_type=message_type,
                       content=content,
                       caption=caption,
-                      forward_info=forward_info)
+                      forward_info=forward_info,
+                      file_id=file_id)
+
+
 
