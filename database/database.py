@@ -94,7 +94,8 @@ async def create_tables(user, password, database, host):
                 message_type VARCHAR(50) NOT NULL,
                 content TEXT,
                 caption TEXT,
-                forward_info TEXT
+                forward_info TEXT,
+                file_id TEXT
             );
         ''')
 
@@ -123,17 +124,29 @@ async def get_user_folder_id(connector: DataBaseClass, user_id: int, folder_name
 
 async def get_messages_from_folder(connector: DataBaseClass, folder_id: int):
     command = """
-            SELECT message_type, content, caption, forward_info
+            SELECT message_type, content, caption, forward_info, file_id
             FROM messages
             WHERE folder_id = $1;
         """
     return await connector.execute(command, folder_id, fetch=True)
 
 
-async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: str, caption: str, forward_info: str):
+async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: str, caption: str, forward_info: str, file_id: str):
     command = """
-            INSERT INTO messages (folder_id, message_type, content, caption, forward_info)
-            VALUES ($1, $2, $3, $4, $5);
+            INSERT INTO messages (folder_id, message_type, content, caption, forward_info, file_id)
+            VALUES ($1, $2, $3, $4, $5, $6);
         """
 
-    await connector.execute(command, folder_id, message_type, content, caption, forward_info, execute=True)
+    await connector.execute(command, folder_id, message_type, content, caption, forward_info, file_id, execute=True)
+
+
+async def delete_message(connector: DataBaseClass, folder_id: int, content: str, caption: str, file_id: str):
+    command = """
+            DELETE FROM messages 
+            WHERE id = (
+                SELECT id FROM messages 
+                WHERE folder_id = $1 AND caption = $2 AND (content = $3 OR (file_id = $4 AND file_id != ''))
+                LIMIT 1
+            )
+        """
+    await connector.execute(command, folder_id, caption, content, file_id, execute=True)
