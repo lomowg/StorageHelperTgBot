@@ -20,8 +20,6 @@ class DB:
 class ConnectionsPool:
     db: DB
     user: UserDB
-    min_size: int
-    max_size: int
 
 
 @dataclass
@@ -43,7 +41,4 @@ def load_config(path: str | None = None) -> Config:
                                                  port=int(env('PORT')),
                                                  db_name=env('DATABASE')),
                                            user=UserDB(user=env('USER'),
-                                                       password=env('PASSWORD')),
-                                           min_size=int(env('POOL_MIN_SIZE')),
-                                           max_size=int(env('POOL_MAX_SIZE'))))
-
+                                                       password=env('PASSWORD'))))
