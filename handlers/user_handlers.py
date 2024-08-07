@@ -96,7 +96,9 @@ async def process_forward_settings_command(callback: CallbackQuery, database: Da
 
 @router.callback_query(F.data == 'forward_on')
 async def process_forward_settings_on(callback: CallbackQuery, database: DataBaseClass):
-    text = LEXICON_RU[callback.data]
+    status = await get_user_forward_info(connector=database, user_id=callback.from_user.id)
+    text = (f'{LEXICON_RU[callback.data]}\n\n'
+            f'Сейчас: ✅ Вкл.')
 
     await update_forward_info(connector=database, user_id=callback.from_user.id, forward_info=True)
 
@@ -111,7 +113,9 @@ async def process_forward_settings_on(callback: CallbackQuery, database: DataBas
 
 @router.callback_query(F.data == 'forward_off')
 async def process_forward_settings_off(callback: CallbackQuery, database: DataBaseClass):
-    text = LEXICON_RU[callback.data]
+    status = await get_user_forward_info(connector=database, user_id=callback.from_user.id)
+    text = (f'{LEXICON_RU[callback.data]}\n\n'
+            f'Сейчас: ❌ Откл.')
 
     await update_forward_info(connector=database, user_id=callback.from_user.id, forward_info=False)
 
@@ -140,7 +144,9 @@ async def process_keep_history_setting_command(callback: CallbackQuery, database
 
 @router.callback_query(F.data == 'keep_history_on')
 async def process_keep_history_on(callback: CallbackQuery, database: DataBaseClass):
-    text = LEXICON_RU[callback.data]
+    status = await get_user_keep_history(connector=database, user_id=callback.from_user.id)
+    text = (f'{LEXICON_RU[callback.data]}\n\n'
+            f'Сейчас: ✅ Вкл.')
 
     await update_keep_history(connector=database, user_id=callback.from_user.id, keep_history=True)
 
@@ -155,7 +161,9 @@ async def process_keep_history_on(callback: CallbackQuery, database: DataBaseCla
 
 @router.callback_query(F.data == 'keep_history_off')
 async def process_keep_history_off(callback: CallbackQuery, database: DataBaseClass):
-    text = LEXICON_RU[callback.data]
+    status = await get_user_keep_history(connector=database, user_id=callback.from_user.id)
+    text = (f'{LEXICON_RU[callback.data]}\n\n'
+            f'Сейчас: ❌ Откл.')
 
     await update_keep_history(connector=database, user_id=callback.from_user.id, keep_history=False)
 
@@ -278,9 +286,9 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
 
         if forward_info and user_forward_info:
             if caption:
-                caption = f"⤴️{forward_info}\n\n{caption}"
+                caption = f"{forward_info}\n\n{caption}"
             else:
-                caption = f'⤴️{forward_info}\n\n'
+                caption = f'{forward_info}\n\n'
 
         if message_type == 'text':
             await callback.message.answer(f'{caption}{content}')
@@ -333,7 +341,6 @@ async def process_delete_message_command(message: types.Message, database: DataB
     state_data = await state.get_data()
     folder_id = state_data.get('folder_id')
 
-    print(folder_id, content, caption, file_id)
     await delete_message(connector=database, folder_id=folder_id, content=content, caption=caption, file_id=file_id)
     await message.answer(text='Сообщение удалено!', reply_to_message_id=message.reply_to_message.message_id)
 
@@ -349,10 +356,10 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
     file_id = None
 
     if message.forward_from or message.forward_from_chat:
-        forward_info = f"Переслано от {message.forward_from.full_name if message.forward_from else message.forward_from_chat.title}"
+        forward_tag = message.forward_from.username if message.forward_from else message.forward_from_chat.username
+        forward_info = f"⤴️Переслано от {message.forward_from.full_name if message.forward_from else message.forward_from_chat.title} (@{forward_tag})"
     else:
         forward_info = ''
-
     if message.text:
         message_type = 'text'
         content = message.text

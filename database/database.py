@@ -27,7 +27,7 @@ async def add_new_user(connector: DataBaseClass,
             VALUES ($1, $2, $3)
         """
 
-    await connector.execute(command, user_id, True, True, execute=True)
+    await connector.execute(command, user_id, True, False, execute=True)
 
 
 async def add_new_folder(connector: DataBaseClass, user_id: int, folder_name: str):
@@ -161,7 +161,7 @@ async def delete_message(connector: DataBaseClass, folder_id: int, content: str,
             DELETE FROM messages 
             WHERE id = (
                 SELECT id FROM messages 
-                WHERE folder_id = $1 AND $2 ~ caption AND (content = $3 OR (file_id = $4 AND file_id != ''))
+                WHERE folder_id = $1 AND (caption = $2 OR forward_info || E'\n\n' || caption = $2) AND (forward_info || E'\n\n' || content = $3 OR (file_id = $4 AND file_id != ''))
                 LIMIT 1
             )
         """
