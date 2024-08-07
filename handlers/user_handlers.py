@@ -10,11 +10,11 @@ from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
     delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message, update_forward_info, \
-    get_user_forward_info
+    get_user_forward_info, get_user_keep_history, update_keep_history
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
-from keyboards.settings_menu import create_settings_menu, create_forward_setting_menu
+from keyboards.settings_menu import create_settings_menu, create_forward_setting_menu, create_history_setting_menu
 from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard
 from database.connection_pool import DataBaseClass
@@ -41,15 +41,18 @@ async def process_start_command(message: Message, database: DataBaseClass):
 
 
 @router.message(Command(commands=['menu']))
-async def process_main_menu_command(message: Message, state: FSMContext, bot: Bot):
+async def process_main_menu_command(message: Message, state: FSMContext, bot: Bot, database: DataBaseClass):
     text = LEXICON_RU['menu']
+    keep_history_status = await get_user_keep_history(connector=database, user_id=message.from_user.id)
 
     await message.answer(
         text=text,
         reply_markup=create_main_menu()
     )
 
-    await cmd_clear(message=message, bot=bot)
+    if not keep_history_status:
+        await cmd_clear(message=message, bot=bot)
+
     await state.set_state(default_state)
 
 
@@ -116,6 +119,50 @@ async def process_forward_settings_off(callback: CallbackQuery, database: DataBa
         await callback.message.edit_text(
             text=text,
             reply_markup=create_forward_setting_menu()
+        )
+
+    await callback.answer()
+
+
+@router.callback_query(F.data == 'keep_history_setting')
+async def process_keep_history_setting_command(callback: CallbackQuery, database: DataBaseClass):
+    status = await get_user_keep_history(connector=database, user_id=callback.from_user.id)
+    text = (f'{LEXICON_RU[callback.data]}\n\n'
+            f'Сейчас: {['❌ Откл.', '✅ Вкл.'][status]}')
+
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=create_history_setting_menu()
+    )
+
+    await callback.answer()
+
+
+@router.callback_query(F.data == 'keep_history_on')
+async def process_keep_history_on(callback: CallbackQuery, database: DataBaseClass):
+    text = LEXICON_RU[callback.data]
+
+    await update_keep_history(connector=database, user_id=callback.from_user.id, keep_history=True)
+
+    if callback.message.text != text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_history_setting_menu()
+        )
+
+    await callback.answer()
+
+
+@router.callback_query(F.data == 'keep_history_off')
+async def process_keep_history_off(callback: CallbackQuery, database: DataBaseClass):
+    text = LEXICON_RU[callback.data]
+
+    await update_keep_history(connector=database, user_id=callback.from_user.id, keep_history=False)
+
+    if callback.message.text != text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_history_setting_menu()
         )
 
     await callback.answer()

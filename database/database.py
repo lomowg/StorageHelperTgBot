@@ -23,11 +23,11 @@ async def add_new_user(connector: DataBaseClass,
 
     command = \
         """
-            INSERT INTO "settings" (user_id, forward_info)
-            VALUES ($1, $2)
+            INSERT INTO "settings" (user_id, forward_info, keep_history)
+            VALUES ($1, $2, $3)
         """
 
-    await connector.execute(command, user_id, True, execute=True)
+    await connector.execute(command, user_id, True, True, execute=True)
 
 
 async def add_new_folder(connector: DataBaseClass, user_id: int, folder_name: str):
@@ -90,7 +90,8 @@ async def create_tables(user, password, database, host):
     await conn.execute('''
                 CREATE TABLE IF NOT EXISTS settings (
                     user_id BIGINT,
-                    forward_info BOOLEAN NOT NULL
+                    forward_info BOOLEAN NOT NULL,
+                    keep_history BOOLEAN NOT NULL
                 );
             ''')
 
@@ -187,3 +188,25 @@ async def get_user_forward_info(connector: DataBaseClass, user_id: int):
     result = await connector.execute(command, user_id, fetchrow=True)
 
     return result['forward_info']
+
+
+async def update_keep_history(connector: DataBaseClass, user_id: int, keep_history: bool):
+    command = \
+        """
+            UPDATE settings
+            SET keep_history = $2
+            WHERE user_id = $1
+        """
+    await connector.execute(command, user_id, keep_history, execute=True)
+
+
+async def get_user_keep_history(connector: DataBaseClass, user_id: int):
+    command = \
+        """
+            SELECT keep_history FROM "settings"
+            WHERE user_id = $1;
+        """
+
+    result = await connector.execute(command, user_id, fetchrow=True)
+
+    return result['keep_history']
