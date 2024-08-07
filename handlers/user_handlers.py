@@ -9,7 +9,8 @@ from aiogram.fsm.state import default_state
 from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
-    delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message, update_forward_info
+    delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message, update_forward_info, \
+    get_user_forward_info
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
@@ -77,8 +78,10 @@ async def process_settings_command(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == 'forward_setting')
-async def process_forward_settings_command(callback: CallbackQuery):
-    text = LEXICON_RU[callback.data]
+async def process_forward_settings_command(callback: CallbackQuery, database: DataBaseClass):
+    status = await get_user_forward_info(connector=database, user_id=callback.from_user.id)
+    text = (f'{LEXICON_RU[callback.data]}\n\n'
+            f'Сейчас: {['❌ Откл.', '✅ Вкл.'][status]}')
 
     await callback.message.edit_text(
         text=text,
@@ -214,6 +217,7 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
     folder_name = callback.data.replace('_fldBtn', '')
     user_id = callback.from_user.id
     folder_id = await get_user_folder_id(connector=database, user_id=user_id, folder_name=folder_name)
+    user_forward_info = await get_user_forward_info(connector=database, user_id=user_id)
 
     await callback.message.edit_text(f"❗️🗂 Ваши сообщения из папки {folder_name}:")
 
@@ -225,7 +229,7 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
         caption = message['caption']
         forward_info = message['forward_info']
 
-        if forward_info:
+        if forward_info and user_forward_info:
             if caption:
                 caption = f"⤴️{forward_info}\n\n{caption}"
             else:

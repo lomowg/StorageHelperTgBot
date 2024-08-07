@@ -175,3 +175,15 @@ async def update_forward_info(connector: DataBaseClass, user_id: int, forward_in
             WHERE user_id = $1
         """
     await connector.execute(command, user_id, forward_info, execute=True)
+
+
+async def get_user_forward_info(connector: DataBaseClass, user_id: int):
+    command = \
+        """
+            SELECT forward_info FROM "settings"
+            WHERE user_id = $1;
+        """
+
+    result = await connector.execute(command, user_id, fetchrow=True)
+
+    return result['forward_info']
