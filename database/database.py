@@ -21,6 +21,14 @@ async def add_new_user(connector: DataBaseClass,
 
     await connector.execute(command, 'Избранное', user_id, execute=True)
 
+    command = \
+        """
+            INSERT INTO "settings" (user_id, reply_info)
+            VALUES ($1, $2)
+        """
+
+    await connector.execute(command, user_id, True, execute=True)
+
 
 async def add_new_folder(connector: DataBaseClass, user_id: int, folder_name: str):
     command = \
@@ -78,6 +86,13 @@ async def create_tables(user, password, database, host):
                 username VARCHAR(100) NOT NULL
             );
         ''')
+
+    await conn.execute('''
+                CREATE TABLE IF NOT EXISTS settings (
+                    user_id BIGINT,
+                    reply_info BOOLEAN NOT NULL
+                );
+            ''')
 
     await conn.execute('''
             CREATE TABLE IF NOT EXISTS folders (
