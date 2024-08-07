@@ -90,7 +90,7 @@ async def create_tables(user, password, database, host):
     await conn.execute('''
                 CREATE TABLE IF NOT EXISTS settings (
                     user_id BIGINT,
-                    reply_info BOOLEAN NOT NULL
+                    forward_info BOOLEAN NOT NULL
                 );
             ''')
 
@@ -165,3 +165,13 @@ async def delete_message(connector: DataBaseClass, folder_id: int, content: str,
             )
         """
     await connector.execute(command, folder_id, caption, content, file_id, execute=True)
+
+
+async def update_forward_info(connector: DataBaseClass, user_id: int, forward_info: bool):
+    command = \
+        """
+            UPDATE settings
+            SET forward_info = $2
+            WHERE user_id = $1
+        """
+    await connector.execute(command, user_id, forward_info, execute=True)

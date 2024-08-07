@@ -9,11 +9,11 @@ from aiogram.fsm.state import default_state
 from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
-    delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message
+    delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message, update_forward_info
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
-from keyboards.settings_menu import create_settings_menu
+from keyboards.settings_menu import create_settings_menu, create_forward_setting_menu
 from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard
 from database.connection_pool import DataBaseClass
@@ -72,6 +72,48 @@ async def process_settings_command(callback: CallbackQuery):
         text=text,
         reply_markup=create_settings_menu()
     )
+
+    await callback.answer()
+
+
+@router.callback_query(F.data == 'forward_setting')
+async def process_forward_settings_command(callback: CallbackQuery):
+    text = LEXICON_RU[callback.data]
+
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=create_forward_setting_menu()
+    )
+
+    await callback.answer()
+
+
+@router.callback_query(F.data == 'forward_on')
+async def process_forward_settings_on(callback: CallbackQuery, database: DataBaseClass):
+    text = LEXICON_RU[callback.data]
+
+    await update_forward_info(connector=database, user_id=callback.from_user.id, forward_info=True)
+
+    if callback.message.text != text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_forward_setting_menu()
+        )
+
+    await callback.answer()
+
+
+@router.callback_query(F.data == 'forward_off')
+async def process_forward_settings_off(callback: CallbackQuery, database: DataBaseClass):
+    text = LEXICON_RU[callback.data]
+
+    await update_forward_info(connector=database, user_id=callback.from_user.id, forward_info=False)
+
+    if callback.message.text != text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=create_forward_setting_menu()
+        )
 
     await callback.answer()
 
