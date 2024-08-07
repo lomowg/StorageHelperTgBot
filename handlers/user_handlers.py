@@ -240,6 +240,7 @@ async def process_delete_message_command(message: types.Message, database: DataB
     state_data = await state.get_data()
     folder_id = state_data.get('folder_id')
 
+    print(folder_id, content, caption, file_id)
     await delete_message(connector=database, folder_id=folder_id, content=content, caption=caption, file_id=file_id)
     await message.answer(text='Сообщение удалено!', reply_to_message_id=message.reply_to_message.message_id)
 
