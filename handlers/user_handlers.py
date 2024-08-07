@@ -13,7 +13,7 @@ from database.database import add_new_user, get_user, get_user_folder, add_new_f
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
-from keyboards.settings_menu import create_settings_menu, create_language_menu
+from keyboards.settings_menu import create_settings_menu
 from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard
 from database.connection_pool import DataBaseClass
@@ -71,32 +71,6 @@ async def process_settings_command(callback: CallbackQuery):
     await callback.message.edit_text(
         text=text,
         reply_markup=create_settings_menu()
-    )
-
-    await callback.answer()
-
-
-@router.callback_query(F.data == 'language')
-async def process_language_command(callback: CallbackQuery):
-    text = LEXICON_RU[callback.data]
-
-    await callback.message.edit_text(
-        text=text,
-        reply_markup=create_language_menu()
-    )
-
-    await callback.answer()
-
-
-@router.callback_query(F.data.in_(['lan_RU', 'lan_EN']))
-async def process_language_choice_command(callback: CallbackQuery):
-    # Реализовать смену языка
-
-    text = LEXICON_RU[callback.data]
-
-    await callback.message.edit_text(
-        text=text,
-        reply_markup=create_language_menu()
     )
 
     await callback.answer()
