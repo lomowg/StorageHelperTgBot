@@ -23,7 +23,7 @@ async def add_new_user(connector: DataBaseClass,
 
     command = \
         """
-            INSERT INTO "settings" (user_id, reply_info)
+            INSERT INTO "settings" (user_id, forward_info)
             VALUES ($1, $2)
         """
 
