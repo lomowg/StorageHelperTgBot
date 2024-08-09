@@ -23,5 +23,5 @@ LEXICON_RU: dict[str, str] = {
     'create_dir_answer': 'Раздел успешно создан!',
     'delete_dir': 'Выберите папку для удаления:',
     'to_author': 'Telegram: @lomowg\n'
-                 'Email: sokol789123inbox.ru'
+                 'Email: sokol789123@inbox.ru'
 }
