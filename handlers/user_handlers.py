@@ -420,7 +420,7 @@ async def process_rename_folder_press(callback: CallbackQuery, database: DataBas
     folder_id = await get_user_folder_id(connector=database, user_id=user_id, folder_name=folder_name)
 
     await callback.message.edit_text(
-        text="Введите новое название для папки:",
+        text=f"Введите новое название для папки \"{folder_name}\":",
     )
 
     await state.set_state(FSMStorageManipulating.rename_folder)
