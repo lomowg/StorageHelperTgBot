@@ -10,13 +10,13 @@ from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
     delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message, update_forward_info, \
-    get_user_forward_info, get_user_keep_history, update_keep_history
+    get_user_forward_info, get_user_keep_history, update_keep_history, rename_folder
 from lexicon.lexicon_general import LEXICON
 
 from lexicon.lexicon_ru import LEXICON_RU
 from keyboards.settings_menu import create_settings_menu, create_forward_setting_menu, create_history_setting_menu
 from keyboards.main_menu import create_main_menu
-from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard
+from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard, create_rename_keyboard
 from database.connection_pool import DataBaseClass
 from services.delete_messages import cmd_clear
 
@@ -400,4 +400,48 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
                       file_id=file_id)
 
 
+@router.callback_query(F.data == 'rename_dir')
+async def process_rename_dir_command(callback: CallbackQuery, database: DataBaseClass):
+    text = LEXICON_RU[callback.data]
 
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=create_rename_keyboard(*await get_user_all_folders(connector=database,
+                                                                        user_id=callback.from_user.id))
+    )
+
+    await callback.answer()
+
+
+@router.callback_query(lambda x: x.data.endswith('rename'))
+async def process_rename_folder_press(callback: CallbackQuery, database: DataBaseClass, state: FSMContext):
+    user_id = callback.from_user.id
+    folder_name = callback.data[:-6]
+    folder_id = await get_user_folder_id(connector=database, user_id=user_id, folder_name=folder_name)
+
+    await callback.message.edit_text(
+        text="Введите новое название для папки:",
+    )
+
+    await state.set_state(FSMStorageManipulating.rename_folder)
+    await state.update_data(folder_id=folder_id)
+
+    await callback.answer()
+
+
+@router.message(StateFilter(FSMStorageManipulating.rename_folder))
+async def process_rename_folder(message: types.Message, database: DataBaseClass, state: FSMContext):
+    new_folder_name = message.text
+    user_id = message.from_user.id
+
+    state_data = await state.get_data()
+    folder_id = state_data.get('folder_id')
+
+    if await get_user_folder(database, user_id, new_folder_name):
+        await message.answer("Папка с таким названием уже существует. Попробуйте другое название.")
+    else:
+        await rename_folder(database, user_id, folder_id, new_folder_name)
+        await message.answer(f"Папка успешно переименована.",
+                             reply_markup=create_dirs_menu(* await get_user_all_folders(connector=database,
+                                                                                        user_id=message.from_user.id)))
+        await state.set_state(default_state)
