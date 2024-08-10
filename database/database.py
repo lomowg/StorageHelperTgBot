@@ -210,3 +210,13 @@ async def get_user_keep_history(connector: DataBaseClass, user_id: int):
     result = await connector.execute(command, user_id, fetchrow=True)
 
     return result['keep_history']
+
+
+async def rename_folder(connector: DataBaseClass, user_id: int, folder_id: int, new_folder_name: str):
+    command = \
+        """
+            UPDATE folders
+            SET folder_name = $3
+            WHERE user_id = $1 AND id = $2
+        """
+    await connector.execute(command, user_id, folder_id, new_folder_name, execute=True)
