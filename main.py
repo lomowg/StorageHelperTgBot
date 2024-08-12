@@ -46,8 +46,6 @@ async def main():
 
     dp.update.middleware.register(DataBaseMiddleware(pool_connect))
 
-    dp.workflow_data.update({'encrypt_key': config.tg_bot.encrypt_key})
-
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
     dp.startup.register(set_main_menu)
