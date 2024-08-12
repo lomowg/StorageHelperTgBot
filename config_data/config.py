@@ -25,6 +25,7 @@ class ConnectionsPool:
 @dataclass
 class TgBot:
     token: str
+    encrypt_key: bytes
 
 
 @dataclass
@@ -36,7 +37,7 @@ class Config:
 def load_config(path: str | None = None) -> Config:
     env = Env()
     env.read_env(path)
-    return Config(tg_bot=TgBot(token=env('BOT_TOKEN')),
+    return Config(tg_bot=TgBot(token=env('BOT_TOKEN'), encrypt_key=env('ENCRYPT_KEY')),
                   con_pool=ConnectionsPool(db=DB(host=env('HOST'),
                                                  port=int(env('PORT')),
                                                  db_name=env('DATABASE')),
