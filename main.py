@@ -15,7 +15,7 @@ from asyncpg.pool import Pool
 from keyboards.main_menu import set_main_menu
 from middlewares.db_middleware import DataBaseMiddleware
 from database.database import create_tables
-
+from middlewares.media_group_middleware import AlbumMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ async def main():
                                                    password=config.con_pool.user.password)
 
     dp.update.middleware.register(DataBaseMiddleware(pool_connect))
+    dp.message.middleware(AlbumMiddleware())
 
     dp.include_router(user_handlers.router)
     dp.include_router(other_handlers.router)
