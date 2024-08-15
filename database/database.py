@@ -147,13 +147,17 @@ async def get_messages_from_folder(connector: DataBaseClass, folder_id: int):
     return await connector.execute(command, folder_id, fetch=True)
 
 
+<<<<<<< HEAD
 async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: list[str], caption: str, forward_info: str, file_id: list[str]):
+=======
+async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: bytes, caption: bytes, forward_info: bytes, file_id: str):
+>>>>>>> refs/remotes/origin/master
     command = """
             INSERT INTO messages (folder_id, message_type, content, caption, forward_info, file_id)
             VALUES ($1, $2, $3, $4, $5, $6);
         """
 
-    await connector.execute(command, folder_id, message_type, content, caption, forward_info, file_id, execute=True)
+    await connector.execute(command, folder_id, message_type, content.decode(), caption.decode(), forward_info.decode(), file_id, execute=True)
 
 
 async def delete_message(connector: DataBaseClass, folder_id: int, content: str, caption: str, file_id: str):
