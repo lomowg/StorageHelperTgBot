@@ -1,4 +1,4 @@
-from aiogram import F, Router, Bot, Dispatcher
+from aiogram import F, Router, Bot
 from aiogram.filters import CommandStart, StateFilter, Command
 from aiogram.types import CallbackQuery, Message, InputMediaPhoto, InputMedia, InputMediaVideo, InputMediaAnimation
 from aiogram.types import InlineKeyboardButton
@@ -8,7 +8,6 @@ from aiogram.fsm.state import default_state
 
 from aiogram import types
 
-from config_data.config import get_encrypt_key
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
     delete_folder, get_user_folder_id, get_messages_from_folder, add_message, delete_message, update_forward_info, \
     get_user_forward_info, get_user_keep_history, update_keep_history, rename_folder
@@ -20,7 +19,6 @@ from keyboards.main_menu import create_main_menu
 from keyboards.storage_menu import create_dirs_menu, create_edit_keyboard, create_rename_keyboard
 from database.connection_pool import DataBaseClass
 from services.delete_messages import cmd_clear
-from services.encryption_messages import encrypt_message, decrypt_message
 
 from states.states import FSMStorageManipulating
 
@@ -271,9 +269,6 @@ async def process_del_bookmark_press(callback: CallbackQuery, database: DataBase
 
 @router.callback_query(lambda x: x.data.endswith('_fldBtn'))
 async def process_folder_press(callback: CallbackQuery, database: DataBaseClass, state: FSMContext):
-
-    encrypt_key = get_encrypt_key()
-
     folder_name = callback.data.replace('_fldBtn', '')
     user_id = callback.from_user.id
     folder_id = await get_user_folder_id(connector=database, user_id=user_id, folder_name=folder_name)
@@ -289,20 +284,8 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
         caption = message['caption']
         forward_info = message['forward_info']
 
-        content = decrypt_message(content, encrypt_key)
-        caption = decrypt_message(caption, encrypt_key)
-        forward_info = decrypt_message(forward_info, encrypt_key)
-
         if forward_info and user_forward_info:
-<<<<<<< HEAD
             caption = f"{forward_info}\n\n{caption}"
-=======
-
-            if caption:
-                caption = f"{forward_info}\n\n{caption}"
-            else:
-                caption = f'{forward_info}\n\n'
->>>>>>> refs/remotes/origin/master
 
         if message_type == 'text':
             await callback.message.answer(caption)
@@ -426,8 +409,6 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
     state_data = await state.get_data()
     folder_id = state_data.get('folder_id')
 
-    encrypt_key = get_encrypt_key()
-
     message_type = None
     content = None
     caption = message.caption if message.caption else ''
@@ -468,10 +449,6 @@ async def process_new_message(message: types.Message, database: DataBaseClass, s
     else:
         await message.answer("Этот тип сообщения не поддерживается.")
         return
-
-    content = encrypt_message(content, encrypt_key)
-    caption = encrypt_message(caption, encrypt_key)
-    forward_info = encrypt_message(forward_info, encrypt_key)
 
     await add_message(connector=database,
                       folder_id=folder_id,
