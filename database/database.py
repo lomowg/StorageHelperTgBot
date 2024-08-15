@@ -108,10 +108,10 @@ async def create_tables(user, password, database, host):
                 id SERIAL PRIMARY KEY,
                 folder_id INT,
                 message_type VARCHAR(50) NOT NULL,
-                content TEXT,
+                content TEXT[],
                 caption TEXT,
                 forward_info TEXT,
-                file_id TEXT
+                file_id TEXT[]
             );
         ''')
 
@@ -147,7 +147,7 @@ async def get_messages_from_folder(connector: DataBaseClass, folder_id: int):
     return await connector.execute(command, folder_id, fetch=True)
 
 
-async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: str, caption: str, forward_info: str, file_id: str):
+async def add_message(connector: DataBaseClass, folder_id: int, message_type: str, content: list[str], caption: str, forward_info: str, file_id: list[str]):
     command = """
             INSERT INTO messages (folder_id, message_type, content, caption, forward_info, file_id)
             VALUES ($1, $2, $3, $4, $5, $6);
@@ -161,7 +161,7 @@ async def delete_message(connector: DataBaseClass, folder_id: int, content: str,
             DELETE FROM messages 
             WHERE id = (
                 SELECT id FROM messages 
-                WHERE folder_id = $1 AND (caption = $2 OR forward_info || E'\n\n' || caption = $2) AND (forward_info || E'\n\n' || content = $3 OR (file_id = $4 AND file_id != ''))
+                WHERE folder_id = $1 AND (caption = $2 OR forward_info || E'\n\n' || caption = $2) AND ((file_id = $4 AND file_id != '') OR forward_info = '')
                 LIMIT 1
             )
         """
