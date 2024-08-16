@@ -156,16 +156,16 @@ async def add_message(connector: DataBaseClass, folder_id: int, message_type: st
     await connector.execute(command, folder_id, message_type, content, caption, forward_info, file_id, execute=True)
 
 
-async def delete_message(connector: DataBaseClass, folder_id: int, content: str, caption: str, file_id: str):
+async def delete_message(connector: DataBaseClass, folder_id: int, caption: str, file_id: list[str]):
     command = """
             DELETE FROM messages 
             WHERE id = (
                 SELECT id FROM messages 
-                WHERE folder_id = $1 AND (caption = $2 OR forward_info || E'\n\n' || caption = $2) AND ((file_id = $4 AND file_id != '') OR forward_info = '')
+                WHERE folder_id = $1 AND (caption = $2 OR LEFT(forward_info || E'\n\n' || caption, 1024) = $2) AND (file_id = $3 OR forward_info = '' OR file_id @> $3 OR file_id IS NULL)
                 LIMIT 1
             )
         """
-    await connector.execute(command, folder_id, caption, content, file_id, execute=True)
+    await connector.execute(command, folder_id, caption, file_id, execute=True)
 
 
 async def update_forward_info(connector: DataBaseClass, user_id: int, forward_info: bool):
