@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
 
+
 from aiogram import types
 
 from database.database import add_new_user, get_user, get_user_folder, add_new_folder, get_user_all_folders, \
@@ -302,8 +303,14 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
         elif message_type == 'animation':
             await callback.message.answer_animation(content[0], caption=caption)
         elif message_type == 'album':
-            first_data = (content[0] + f'"{caption}")').replace('\n', '\\n')
-            media_group = list(map(eval, [first_data] + content[1:]))
+            first_data = eval(content[0])
+            first_data.caption = caption
+            media_group = [first_data] + list(map(eval, content[1:]))
+
+            if len(caption) > 1024:
+                caption = caption[:1024]
+
+            first_data.caption = caption
             await callback.message.answer_media_group(media_group)
 
     await state.set_state(FSMStorageManipulating.in_folder)
@@ -311,38 +318,60 @@ async def process_folder_press(callback: CallbackQuery, database: DataBaseClass,
     await callback.answer()
 
 
+@router.message(lambda message: message.reply_to_message is not None
+                                and 'del' in message.text
+                                and message.reply_to_message.media_group_id
+                                and (message.reply_to_message.photo or message.reply_to_message.video or message.reply_to_message.animation),
+                StateFilter(FSMStorageManipulating.in_folder))
+async def process_delete_albums(message: types.Message, database: DataBaseClass, state: FSMContext):
+    state_data = await state.get_data()
+    folder_id = state_data.get('folder_id')
+    caption = message.reply_to_message.caption if message.reply_to_message.caption else ''
+    file_id = []
+
+    if message.reply_to_message.photo:
+        file_id = [f'InputMediaPhoto(media=\"{message.reply_to_message.photo[-1].file_unique_id}\")']
+    elif message.reply_to_message.video:
+        file_id = [f'InputMediaVideo(media=\"{message.reply_to_message.video.file_unique_id}\")']
+    elif message.reply_to_message.animation:
+        file_id = [f'InputMediaAnimation(media=\"{message.reply_to_message.animation.file_unique_id}\")']
+
+    await delete_message(connector=database, folder_id=folder_id, caption=caption, file_id=file_id)
+    await message.answer(text='Сообщение удалено!', reply_to_message_id=message.reply_to_message.message_id)
+
+
 @router.message(lambda message: message.reply_to_message is not None and 'del' in message.text,
                 StateFilter(FSMStorageManipulating.in_folder))
 async def process_delete_message_command(message: types.Message, database: DataBaseClass, state: FSMContext):
     content = None
     file_id = None
+    caption = message.reply_to_message.caption if message.reply_to_message.caption else ''
 
     if message.reply_to_message.text:
-        content = message.reply_to_message.text
+        caption = message.reply_to_message.text
     elif message.reply_to_message.photo:
-        content = message.reply_to_message.photo[-1].file_id
-        file_id = message.reply_to_message.photo[-1].file_unique_id
+        content = [message.reply_to_message.photo[-1].file_id]
+        file_id = [message.reply_to_message.photo[-1].file_unique_id]
     elif message.reply_to_message.video:
-        content = message.reply_to_message.video.file_id
-        file_id = message.reply_to_message.video.file_unique_id
+        content = [message.reply_to_message.video.file_id]
+        file_id = [message.reply_to_message.video.file_unique_id]
     elif message.reply_to_message.document:
-        content = message.reply_to_message.document.file_id
-        file_id = message.reply_to_message.document.file_unique_id
+        content = [message.reply_to_message.document.file_id]
+        file_id = [message.reply_to_message.document.file_unique_id]
     elif message.reply_to_message.audio:
-        content = message.reply_to_message.audio.file_id
-        file_id = message.reply_to_message.audio.file_unique_id
+        content = [message.reply_to_message.audio.file_id]
+        file_id = [message.reply_to_message.audio.file_unique_id]
     elif message.reply_to_message.voice:
-        content = message.reply_to_message.voice.file_id
-        file_id = message.reply_to_message.voice.file_unique_id
+        content = [message.reply_to_message.voice.file_id]
+        file_id = [message.reply_to_message.voice.file_unique_id]
     elif message.reply_to_message.animation:
-        content = message.reply_to_message.animation.file_id
-        file_id = message.reply_to_message.animation.file_unique_id
+        content = [message.reply_to_message.animation.file_id]
+        file_id = [message.reply_to_message.animation.file_unique_id]
 
-    caption = message.reply_to_message.caption if message.reply_to_message.caption else ''
     state_data = await state.get_data()
     folder_id = state_data.get('folder_id')
 
-    await delete_message(connector=database, folder_id=folder_id, content=content, caption=caption, file_id=file_id)
+    await delete_message(connector=database, folder_id=folder_id, caption=caption, file_id=file_id)
     await message.answer(text='Сообщение удалено!', reply_to_message_id=message.reply_to_message.message_id)
 
 
@@ -377,22 +406,13 @@ async def process_new_albums(message: types.Message, database: DataBaseClass, st
 
     for n, msg in enumerate(album):
         if msg.photo:
-            if n == 0:
-                content_group.append(f'InputMediaPhoto(media=\"{msg.photo[-1].file_id}\", caption=')
-            else:
-                content_group.append(f'InputMediaPhoto(media=\"{msg.photo[-1].file_id}\")')
+            content_group.append(f'InputMediaPhoto(media=\"{msg.photo[-1].file_id}\")')
             file_id_group.append(f'InputMediaPhoto(media=\"{msg.photo[-1].file_unique_id}\")')
         elif msg.video:
-            if n == 0:
-                content_group.append(f'InputMediaVideo(media=\"{msg.video.file_id}\", caption=')
-            else:
-                content_group.append(f'InputMediaVideo(media=\"{msg.video.file_id}\")')
+            content_group.append(f'InputMediaVideo(media=\"{msg.video.file_id}\")')
             file_id_group.append(f'InputMediaVideo(media=\"{msg.video.file_unique_id}\")')
         elif msg.animation:
-            if n == 0:
-                content_group.append(f'InputMediaAnimation(media=\"{msg.animation.file_id}\", caption=')
-            else:
-                content_group.append(f'InputMediaAnimation(media=\"{msg.animation.file_id}\")')
+            content_group.append(f'InputMediaAnimation(media=\"{msg.animation.file_id}\")')
             file_id_group.append(f'InputMediaAnimation(media=\"{msg.animation.file_unique_id}\")')
 
     await add_message(connector=database,
